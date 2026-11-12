@@ -1,10 +1,8 @@
 name: cvd-zero-cross
-
 on:
-  schedule:
-    - cron: '0 */5 * * *'  # ہر 5 گھنٹے
   workflow_dispatch:
-
+  schedule:
+    - cron: "0 */6 * * *"
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -12,25 +10,12 @@ jobs:
     env:
       NTFY_URL: ${{ secrets.NTFY_URL }}
       NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
-      BINANCE_REST_BASE: ${{ secrets.BINANCE_REST_BASE }}
-      BINANCE_WS_BASE: ${{ secrets.BINANCE_WS_BASE }}
-      MAX_RUNTIME_SEC: "20400"  # 340 min = 20400 sec
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - name: Run CVD Zero Cross bot
-        run: |
-          timeout -s INT -k 120 340m python cvd_zero_cross.py
-          EXIT_CODE=$?
-          echo "Bot exited with code: $EXIT_CODE"
-          # Accept: 0 (graceful), 124 (timeout killed), 137 (SIGKILL after grace)
-          if [ $EXIT_CODE -eq 0 ] || [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 137 ]; then
-            echo "Run completed successfully"
-            exit 0
-          else
-            echo "Unexpected exit code: $EXIT_CODE"
-            exit 1
-          fi
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install aiohttp websockets python-dotenv
+      - name: Run bot
+        run: timeout -s INT -k 120 340m python cvd_zero_cross.py; code=$?; if [ $code -eq 0 ] || [ $code -eq 124 ] || [ $code -eq 137 ]; then echo "OK exit=$code"; else echo "FAIL exit=$code"; exit 1; fi
